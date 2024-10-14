@@ -22,7 +22,7 @@ def seed_data():
 
     # Create WhatsNew items
     whats_new1 = WhatsNew(title="New Collection!", description="Check out our latest collection", 
-                          price=49.99, image_url="new_collection.jpg", release_date=datetime(2024, 1, 1))
+                         image_url="new_collection.jpg", release_date=datetime(2024, 1, 1))
 
     # Create FlashSale items
     flash_sale1 = FlashSale(name="50% off on Shoes", discount=50.0, 
