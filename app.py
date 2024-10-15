@@ -1,7 +1,6 @@
 from flask import Flask, jsonify, request
-from models import db, User
+from models import db, User, Item, SpecialCategory
 from flask import Flask, jsonify, request, make_response
-from models import db, Item, SpecialCategory
 from flask_migrate import Migrate
 from serializers import user_serializer
 from flask_bcrypt import Bcrypt  # is used to integrate password hashing and checking in a Flask application, providing a secure way to handle user authentication.

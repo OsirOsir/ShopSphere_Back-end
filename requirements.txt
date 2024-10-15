@@ -1,5 +1,4 @@
 alembic==1.13.2
-aniso8601==9.0.1
 asttokens==2.4.1
 backcall==0.2.0
 bcrypt==4.2.0
@@ -32,12 +31,9 @@ pickleshare==0.7.5
 pipenv==2024.0.0
 platformdirs==4.2.2
 prompt_toolkit==3.0.47
-psycopg2-binary==2.9.9
 ptyprocess==0.7.0
 pure_eval==0.2.3
 Pygments==2.18.0
-python-dotenv==1.0.1
-pytz==2024.2
 six==1.16.0
 SQLAlchemy==2.0.34
 stack-data==0.6.3
