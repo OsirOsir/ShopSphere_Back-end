@@ -1,25 +1,18 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData
 
-db = SQLAlchemy()
-
-
-
-
-# Users model
-class User(db.Model):
-    __tablename__ = 'users'
-
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String, nullable=False, unique=True)
-    email = db.Column(db.String, unique=True, nullable=False)
-    password = db.Column(db.String, nullable=False)
+metadata = MetaData(naming_convention={
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+})
+db = SQLAlchemy(metadata=metadata)
+# db = SQLAlchemy()
     
     
 item_special_categories = db.Table('item_special_categories', 
                                    db.Column('item_id', db.Integer, db.ForeignKey('items.id'), primary_key=True), 
                                    db.Column('special_category_id', db.Integer, db.ForeignKey('special_categories.id'), primary_key=True))
     
-    # Item 
+# Item 
 class Item(db.Model):
     __tablename__ = 'items'
 
@@ -39,4 +32,5 @@ class SpecialCategory(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False, unique=True)
+
 

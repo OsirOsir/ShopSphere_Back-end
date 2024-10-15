@@ -1,4 +1,4 @@
-from models import db, User, Item, SpecialCategory
+from models import db, Item, SpecialCategory
 from app import app  
 from datetime import datetime
 from faker import Faker
@@ -8,24 +8,24 @@ fake = Faker()
 # Create all tables in the database
 with app.app_context():
     
-    User.query.delete()
+    # User.query.delete()
     Item.query.delete()
     SpecialCategory.query.delete()
 
-    print("Seeding users...")
+    # print("Seeding users...")
     
-    users = [
-        User(username= fake.name(), email= fake.email(), password= "password123"),
-        User(username= fake.name(), email= fake.email(), password= "passcode21"),
-        User(username= fake.name(), email= fake.email(), password= fake.word()),
-        User(username= fake.name(), email= fake.email(), password= "5faker10code"),
-        User(username= fake.name(), email= fake.email(), password= "access@123"),
-        User(username= fake.name(), email= fake.email(), password= fake.word())
-    ]
+    # users = [
+    #     User(username= fake.name(), email= fake.email(), _password_hash= "password123"),
+    #     User(username= fake.name(), email= fake.email(), _password_hash= "passcode21"),
+    #     User(username= fake.name(), email= fake.email(), _password_hash= fake.word()),
+    #     User(username= fake.name(), email= fake.email(), _password_hash= "5faker10code"),
+    #     User(username= fake.name(), email= fake.email(), _password_hash= "access@123"),
+    #     User(username= fake.name(), email= fake.email(), _password_hash= fake.word())
+    # ]
     
-    db.session.add_all(users)
+    # db.session.add_all(users)
     
-    print("Users seeded successfully!")
+    # print("Users seeded successfully!")
     
     print("Seeding items...")
     

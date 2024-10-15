@@ -1,7 +1,8 @@
-from flask import Flask, jsonify, request
-from models import db, User, Item, SpecialCategory
+from flask import Flask, jsonify, request, make_response
+from models import db, Item, SpecialCategory
 from flask_migrate import Migrate
-from serializers import (user_serializer, item_serializer)
+from serializers import item_serializer
+from flask_restful import Resource, Api
 
 app = Flask(__name__)
 
@@ -11,35 +12,77 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 
+api = Api(app)
+
+
 @app.route('/')
 def index():
     return "<h1>Welcome to ShopSphere</h1>"
 
-# Users routes
-@app.route('/users', methods=['GET', 'POST'])
-def handle_users():
-    if request.method == 'GET':
-        users = User.query.all()
-        return jsonify([user_serializer(user) for user in users])
-    
-    elif request.method == 'POST':
-        data = request.json
-        new_user = User(name=data['name'], email=data['email'], password=data['password'])
-        db.session.add(new_user)
-        db.session.commit()
-        return jsonify(user_serializer(new_user)), 201
 
-@app.route('/users/<int:user_id>', methods=['GET', 'DELETE'])
-def handle_user(user_id):
-    user = User.query.get_or_404(user_id)
+@app.route("/api/clothes", methods=["GET"])
+def display_clothes():
+    pass
 
-    if request.method == 'GET':
-        return jsonify(user_serializer(user))
+
+@app.route("/api/shoes", methods=["GET"])
+def display_shoes():
+    pass
+
+
+@app.route("/api/artwork", methods=["GET"])
+def display_artwork():
+    pass
+
+
+@app.route("/api/electronics", methods=["GET"])
+def display_electronics():
+    pass
+
+
+
+@app.route("/api/books", methods=["GET"])
+def display_books():
+    pass
+
+
+class FlashSale(Resource):
+    def get(self):
+        pass
     
-    elif request.method == 'DELETE':
-        db.session.delete(user)
-        db.session.commit()
-        return {"message": f"User with id {user_id} has been deleted"}
+    def post(self):
+        pass
+    
+    def delete(self):
+        pass
+    
+api.add_resource(FlashSale, '/api/flashsale', endpoint="flashSale")
+
+
+class HotInCategory(Resource):
+    def get(self):
+        pass
+    
+    def post(self):
+        pass
+    
+    def delete(self):
+        pass
+    
+api.add_resource(HotInCategory, '/api/hot_in_category', endpoint="hotInCategory")
+
+
+class WhatsNew(Resource):
+    def get(self):
+        pass
+    
+    def post(self):
+        pass
+    
+    def delete(self):
+        pass
+    
+api.add_resource(WhatsNew, '/api/whats_new', endpoint="whatsNew")
     
     
 @app.route("/api/item/<int:item_id>/add_special_category", methods=["POST"])
@@ -53,6 +96,7 @@ def add_special_category_to_item(item_id):
         item.special_categories.append(special_category)
         db.session.commit()
         return jsonify({"message": f"Special Category {special_category_name} added to item"}), 200
+    
     return jsonify({"message": "Error: Item or Special Category not found"}), 404
 
 @app.route("/api/item/<int:item_id>/remove_special_category", methods=["POST"])
@@ -66,7 +110,12 @@ def remove_special_category_from_item(item_id):
         item.special_categories.remove(special_category)
         db.session.commit()
         return jsonify({"message": f"Special Category {special_category_name} removed from item"}), 200
+    
     return jsonify({"message": "Error: Item or Special Category not found"}), 404
+
+
+
+
 
 
 # # Clothes routes
