@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from models import db, User, Clothes, WhatsNew, FlashSale, HotInCategory, Artwork, Shoes, Electronics, Book, Cart, CartItem
+from models import db, User, Item
 from flask_migrate import Migrate
 from serializers import (user_serializer, clothes_serializer, whatsnew_serializer, 
                          flashsale_serializer, hotincategory_serializer, artwork_serializer, 
@@ -8,7 +8,7 @@ from serializers import (user_serializer, clothes_serializer, whatsnew_serialize
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://groupthree:group3@localhost/shop_sphere'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://groupthree:group3@localhost/shopsphere_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)

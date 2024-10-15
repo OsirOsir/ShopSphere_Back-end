@@ -1,4 +1,4 @@
-from models import db, User, Clothes, WhatsNew, FlashSale, HotInCategory, Artwork, Shoes, Electronics, Book, Cart, CartItem
+from models import db, User, Item
 from app import app  
 from datetime import datetime
 
@@ -66,6 +66,8 @@ def seed_data():
     db.session.commit()
 
     print("Database seeded successfully for GroupThree!")
+
+    category_list=['Books', 'Artworks', 'Clothes', 'Shoes', 'Electronics']
 
 
 if __name__ == '__main__':
