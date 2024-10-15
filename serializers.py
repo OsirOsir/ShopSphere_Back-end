@@ -1,3 +1,9 @@
+def user_serializer(user):
+    return {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+       
 # serializers.py
 
 def item_serializer(item):
