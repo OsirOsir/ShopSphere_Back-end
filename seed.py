@@ -9,12 +9,14 @@ fake = Faker()
 # Create all tables in the database
 with app.app_context():
     
+    #Delete associated relationships before seeding
     db.session.execute(text("DELETE FROM item_special_categories"))
+    
     #Remove all rows from the tables
     Item.query.delete()
     SpecialCategory.query.delete()
     
-    #Reset primary key sequences
+    #Reset primary key sequences to start at 1
     db.session.execute(text("ALTER SEQUENCE items_id_seq RESTART WITH 1;"))
     db.session.execute(text("ALTER SEQUENCE special_categories_id_seq RESTART WITH 1;"))
     
