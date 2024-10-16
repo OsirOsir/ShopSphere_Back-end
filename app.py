@@ -262,7 +262,7 @@ def display_books():
 class FlashSale(Resource):
     def get(self):
         items = Item.query.filter(Item.is_flash_sale == True).all()
-        return jsonify([product_serializer(item) for item in items])
+        return jsonify([item_serializer(item) for item in items])
 
 
 
