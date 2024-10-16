@@ -21,7 +21,7 @@ class Item(db.Model):
     description = db.Column(db.Text)
     price = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String, nullable=False)
-    items_available = db.Column(db.String, nullable=True)
+    items_available = db.Column(db.Integer, nullable=True)
     offer_price = db.Column(db.Integer)
     image_url = db.Column(db.Text, nullable=False)
     
