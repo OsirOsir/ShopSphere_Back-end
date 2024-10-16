@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, render_template, make_response, Blueprint
 from models import db, User, Item, SpecialCategory, Cart, CartItem, Product
 from flask_migrate import Migrate
-from serializers import user_serializer, product_serializer
+from serializers import user_serializer, product_serializer, item_serializer
 from flask_bcrypt import Bcrypt
 from sqlalchemy.exc import IntegrityError
 from flask_restful import Api, Resource
@@ -264,7 +264,78 @@ class FlashSale(Resource):
         items = Item.query.filter(Item.is_flash_sale == True).all()
         return jsonify([product_serializer(item) for item in items])
 
-api.add_resource(FlashSale, "/api/flashsale")
+
+
+class HotInCategory(Resource):
+    def get(self):
+        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "hot_in_category").all()
+        
+        if items:  
+            return jsonify([item_serializer(item) for item in items])
+        
+        return jsonify({"message": "No items in Hot In Category section."})
+    
+
+class WhatsNew(Resource):
+    def get(self):
+        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "whats_new").all()
+        
+        if items: 
+            return jsonify([item_serializer(item) for item in items])
+        
+        return jsonify({"message": "No items in What's New section."})
+    
+    
+api.add_resource(FlashSale, '/api/flashsale', endpoint="flashSale")
+api.add_resource(HotInCategory, '/api/hot_in_category', endpoint="hotInCategory")
+api.add_resource(WhatsNew, '/api/whats_new', endpoint="whatsNew")
+    
+    
+@app.route("/api/item/<int:item_id>/add_special_category", methods=["POST"])
+def add_special_category_to_item(item_id):
+    data = request.json
+    special_category_name = data["special_category_name"]
+    
+    item = Item.query.get(item_id)
+    special_category = SpecialCategory.query.filter_by(name=special_category_name).first()
+
+    if special_category and item:
+        item.special_categories.append(special_category)
+        db.session.commit()
+        return jsonify({"message": f"Special Category {special_category_name} added to item"}), 200
+    
+    return jsonify({"message": "Error: Item or Special Category not found"}), 404
+
+
+@app.route("/api/item/<int:item_id>/remove_special_category", methods=["POST"])
+def remove_special_category_from_item(item_id):
+    data = request.json
+    special_category_name = data["special_category_name"]
+    
+    item = Item.query.get(item_id)
+    special_category = SpecialCategory.query.filter_by(name=special_category_name).first()
+
+    if special_category and item:
+        item.special_categories.remove(special_category)
+        db.session.commit()
+        return jsonify({"message": f"Special Category {special_category_name} removed from item"}), 200
+    
+    return jsonify({"message": "Error: Item or Special Category not found"}), 404
+
+
+@app.route('/api/search_items', methods=["GET"])
+def search_items():
+    
+    search_term = request.args.get('q', '')
+    
+    items = Item.query.filter(Item.item_name.ilike(f'%{search_term}%')).all()
+    
+    if items:
+        return jsonify([item_serializer(item) for item in items]), 200
+    
+    return jsonify({"message": "No search results found."}), 404
+    
+
 
 if __name__ == '__main__':
     app.run(port=5555)
