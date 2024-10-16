@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from models import db, User, Item, SpecialCategory
+from models import db, User, Item, SpecialCategory, Cart, CartItem
 from flask import Flask, jsonify, request, make_response
 from flask_migrate import Migrate
 from serializers import user_serializer
@@ -18,6 +18,83 @@ migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 
 api = Api(app)
+
+# Creates a blueprint for cart routes 
+cart_bp = Blueprint('cart', __name__)
+
+@cart_bp.route('/cart/add', methods=['POST'])
+def add_to_cart():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    item_id = data.get('item_id')
+    quantity = data.get('quantity', 1)
+
+    cart = Cart.query.filter_by(user_id=user_id).first()
+    if not cart:
+        cart = Cart(user_id=user_id)
+        db.session.add(cart)
+
+    item = Item.query.get(item_id)
+    if not item:
+        return jsonify({'message': 'Item not found'}), 404
+
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, item_id=item.id).first()
+    if cart_item:
+        cart_item.quantity += quantity
+    else:
+        cart_item = CartItem(cart_id=cart.id, item_id=item.id, quantity=quantity)
+        db.session.add(cart_item)
+
+    cart.update_total()
+    db.session.commit()
+
+    return jsonify({'message': 'Item added to cart'}), 201
+
+
+@cart_bp.route('/cart/<int:user_id>', methods=['GET'])
+def view_cart(user_id):
+    cart = Cart.query.filter_by(user_id=user_id).first()
+    if not cart or not cart.items:
+        return jsonify({'message': 'Cart is empty'}), 404
+
+    cart_items = [{
+        'item': item.item.item_name, 
+        'quantity': item.quantity, 
+        'subtotal': item.subtotal
+    } for item in cart.items]
+
+    return jsonify({'items': cart_items, 'total': cart.total_price}), 200
+
+
+@cart_bp.route('/cart/update', methods=['PUT'])
+def update_cart():
+    data = request.get_json()
+    cart_item = CartItem.query.filter_by(cart_id=data['cart_id'], item_id=data['item_id']).first()
+    if not cart_item:
+        return jsonify({'message': 'Item not found in cart'}), 404
+
+    cart_item.quantity = data['quantity']
+    cart_item.cart.update_total()
+    db.session.commit()
+
+    return jsonify({'message': 'Cart updated'}), 200
+
+
+@cart_bp.route('/cart/delete', methods=['DELETE'])
+def delete_from_cart():
+    data = request.get_json()
+    cart_item = CartItem.query.filter_by(cart_id=data['cart_id'], item_id=data['item_id']).first()
+    if not cart_item:
+        return jsonify({'message': 'Item not found in cart'}), 404
+
+    db.session.delete(cart_item)
+    cart_item.cart.update_total()
+    db.session.commit()
+
+    return jsonify({'message': 'Item deleted from cart'}), 200
+
+# Register the cart blueprint
+app.register_blueprint(cart_bp)
 
 
 @app.route('/')
