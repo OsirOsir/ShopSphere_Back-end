@@ -19,13 +19,13 @@ api = Api(app)
 
 
 def is_admin():
-    # Check if the current user is an admin (pseudo-code for demonstration purposes)
+    # Check if the current user is an admin
     auth_header = request.headers.get('Authorization')
     if not auth_header:
         abort(401, "Unauthorized: No token provided")
     
-    token = auth_header.split(" ")[1]  # Assuming Bearer token is used
-    user = User.query.filter_by(token=token).first()  # Replace with actual token validation
+    token = auth_header.split(" ")[1]
+    user = User.query.filter_by(token=token).first()
     if not user or not user.is_admin:
         abort(403, "Forbidden: Admins only")
     return user
@@ -56,7 +56,7 @@ def handle_users():
 
         # Create a new user and set the password
         new_user = User(name=data['name'], email=data['email'])
-        new_user.password = data['password']  # Use the password setter to hash the password
+        new_user.password = data['password']
 
         # Add user to the session and commit
         db.session.add(new_user)
@@ -66,7 +66,7 @@ def handle_users():
 # Admin routes for items
 @app.route("/api/items", methods=["POST"])
 def create_item():
-    is_admin()  # Check if the user is an admin
+    is_admin()
     data = request.json
     new_item = Item(
         item_name=data['item_name'],
@@ -82,7 +82,7 @@ def create_item():
 
 @app.route("/api/items/<int:item_id>", methods=["PUT"])
 def update_item(item_id):
-    is_admin()  # Check if the user is an admin
+    is_admin()
     item = Item.query.get_or_404(item_id)
     data = request.json
     item.item_name = data.get('item_name', item.item_name)
@@ -96,24 +96,11 @@ def update_item(item_id):
 
 @app.route("/api/items/<int:item_id>", methods=["DELETE"])
 def delete_item(item_id):
-    is_admin()  # Check if the user is an admin
+    is_admin()
     item = Item.query.get_or_404(item_id)
     db.session.delete(item)
     db.session.commit()
     return jsonify({"message": "Item deleted successfully"}), 200
-
-# Example routes for displaying items (no admin check required)
-@app.route("/api/clothes", methods=["GET"])
-def display_clothes():
-    items = Item.query.filter_by(category="Clothes").all()
-    return jsonify([item_serializer(item) for item in items])
-
-@app.route("/api/shoes", methods=["GET"])
-def display_shoes():
-    items = Item.query.filter_by(category="Shoes").all()
-    return jsonify([item_serializer(item) for item in items])
-
-# Other routes omitted for brevity
 
 if __name__ == '__main__':
     app.run(debug=True, port=5555)
