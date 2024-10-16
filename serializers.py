@@ -5,20 +5,19 @@ def user_serializer(user):
         "email": user.email,
     }
 
+
 def item_serializer(item):
     return {
         "id": item.id,
-        "item_name": item.item_name,
-        "item_name": item.item_name,  # Updated to match your models.py
+        "item_name": item.item_name,  # Correct field name
         "description": item.description,
         "price": item.price,
         "category": item.category,
-        "product_quantity": item.product_quantity,  # Preserved from the 'products' version
-        "items_available": item.items_available,  # If needed, you can choose to keep or remove
-        "offer_price": item.offer_price,  # If needed, you can choose to keep or remove
+        "product_quantity": item.product_quantity,  # Field from your 'products' version
         "image_url": item.image_url,
-        "is_in_stock": item.is_in_stock(),  
+        "is_in_stock": item.is_in_stock(),  # Calling the method to check stock
     }
+
 
 def notification_serializer(notification):
     """Serialize a Notification object into a dictionary."""
@@ -26,6 +25,6 @@ def notification_serializer(notification):
         'id': notification.id,
         'user_id': notification.user_id,
         'item_id': notification.item_id,
-        'item_name': notification.item.item_name,  
+        'item_name': notification.item.item_name,  # Accessing item details
         'message': notification.message
     }
