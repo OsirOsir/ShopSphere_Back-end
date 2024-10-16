@@ -1,5 +1,3 @@
-# serializers.py
-
 def user_serializer(user):
     return {
         "id": user.id,
