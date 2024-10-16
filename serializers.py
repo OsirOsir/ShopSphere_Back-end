@@ -1,10 +1,19 @@
-# serializers.py
-
 def user_serializer(user):
     return {
         "id": user.id,
         "name": user.name,
         "email": user.email,
+        "role": user.role,  # From the 'authentication' branch
+        "products": [product_serializer(product) for product in user.products] if user.is_admin() else []  # From 'authentication'
+    }
+
+def product_serializer(product):
+    return {
+        "id": product.id,
+        "name": product.name,
+        "description": product.description,
+        "price": product.price,
+        "item_availability": product.item_availability,  # From 'main'
     }  # Closing the dictionary here
 
 def item_serializer(item):

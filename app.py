@@ -1,16 +1,36 @@
 from flask import Flask, jsonify, request, render_template, make_response, Blueprint
-from models import db, User, Item, SpecialCategory, Cart, CartItem
+from models import db, User, Item, SpecialCategory, Cart, CartItem, Product
 from flask_migrate import Migrate
-from flask_restful import Api, Resource
+from serializers import user_serializer, product_serializer
+from flask_bcrypt import Bcrypt
 from sqlalchemy.exc import IntegrityError
+from flask_restful import Api, Resource
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from functools import wraps
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://groupthree:group3@localhost/shopsphere_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'supersecretkey'
 
 db.init_app(app)
 migrate = Migrate(app, db)
+bcrypt = Bcrypt(app)
+login_manager = LoginManager(app)
 api = Api(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+def admin_required(f):
+    """Decorator to ensure the current user is an admin."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin():
+            return jsonify({'error': 'Admin access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Creates a blueprint for cart routes
 cart_bp = Blueprint('cart', __name__)
@@ -90,42 +110,120 @@ app.register_blueprint(cart_bp)
 def index():
     return "<h1>Welcome to ShopSphere</h1>"
 
-# Users routes
 @app.route('/users', methods=['GET', 'POST'])
 def handle_users():
     if request.method == 'GET':
         users = User.query.all()
-        return jsonify([user_serializer(user) for user in users])
+        return jsonify([user_serializer(user) for user in users]), 200
 
     elif request.method == 'POST':
         data = request.json
 
-        if 'name' not in data or 'email' not in data or 'password' not in data:
+        required_fields = ['name', 'email', 'password']
+        if not all(field in data for field in required_fields):
             return jsonify({'error': 'Name, email, and password are required'}), 400
 
-        existing_user = User.query.filter_by(email=data['email']).first()
-        if existing_user:
+        if User.query.filter_by(email=data['email']).first():
             return jsonify({'error': 'User with this email already exists'}), 400
 
-        new_user = User(name=data['name'], email=data['email'])
-        new_user.password = data['password']
+        try:
+            role = data.get('role', 'user')
+            new_user = User(
+                name=data['name'], 
+                email=data['email'], 
+                role=role
+            )
+            new_user.password = data['password']
+            db.session.add(new_user)
+            db.session.commit()
 
-        db.session.add(new_user)
+            return jsonify(user_serializer(new_user)), 201
 
-# Serializers
-def item_serializer(item):
-    return {
-        "id": item.id,
-        "item_name": item.item_name,
-        "description": item.description,
-        "price": item.price,
-        "category": item.category,
-        "product_quantity": item.product_quantity,
-        "image_url": item.image_url,
-        "is_in_stock": item.is_in_stock(),
-    }
+        except IntegrityError:
+            db.session.rollback()
+            return jsonify({'error': 'Database integrity error occurred'}), 500
 
-# Routes for categories
+# User login
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    user = User.query.filter_by(email=data.get('email')).first()
+
+    if user and user.is_active and user.authenticate(data.get('password')):  
+        login_user(user)
+        return jsonify({'message': 'Login successful', 'user': user_serializer(user)}), 200
+    return jsonify({'error': 'Invalid email or password'}), 401
+
+# User logout
+@app.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({'message': 'Logout successful'}), 200
+
+# User profile
+@app.route('/profile', methods=['GET'])
+@login_required
+def profile():
+    return jsonify(user_serializer(current_user)), 200
+
+# Admin routes for managing products
+@app.route('/admin/products', methods=['POST'])
+@login_required
+@admin_required
+def add_product():
+    data = request.json
+
+    if 'name' not in data or 'price' not in data or 'user_id' not in data:
+        return jsonify({'error': 'Name, price, and user_id are required'}), 400
+
+    try:
+        user = User.query.get(data['user_id'])
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        new_product = Product(
+            name=data['name'],
+            description=data.get('description', ''),
+            price=data['price'],
+            item_availability=data.get('item_availability', 0),
+            user_id=data['user_id']
+        )
+        db.session.add(new_product)
+        db.session.commit()
+
+        return jsonify(product_serializer(new_product)), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# Get user by ID
+@app.route('/users/<int:id>', methods=['GET'])
+@login_required
+def get_user_by_id(id):
+    user = User.query.get(id)
+    if user:
+        return jsonify(user_serializer(user)), 200
+    return jsonify({'error': 'User not found'}), 404
+
+# Admin delete user
+@app.route('/users/<int:id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_user(id):
+    user = User.query.get(id)
+    if user:
+        try:
+            db.session.delete(user)
+            db.session.commit()
+            return jsonify({'message': f'User {id} deleted successfully.'}), 204
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500
+    return jsonify({'error': 'User not found'}), 404
+
+# Additional category and item-related routes
 @app.route("/api/clothes", methods=["GET"])
 def display_clothes():
     clothes = Item.query.filter(Item.category == "Clothes").all()
@@ -161,79 +259,12 @@ def display_books():
         return jsonify({"message": "No books available currently."}), 404
     return jsonify([item_serializer(books_item) for books_item in books]), 200
 
-# Special category-related resources
 class FlashSale(Resource):
     def get(self):
-        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "flash_sale").all()
-        if items:
-            return jsonify([item_serializer(item) for item in items])
-        return jsonify({"message": "No items in Flash Sale section."})
+        items = Item.query.filter(Item.is_flash_sale == True).all()
+        return jsonify([product_serializer(item) for item in items])
 
-class HotInCategory(Resource):
-    def get(self):
-        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "hot_in_category").all()
-        if items:
-            return jsonify([item_serializer(item) for item in items])
-        return jsonify({"message": "No items in Hot In Category section."})
+api.add_resource(FlashSale, "/api/flashsale")
 
-class WhatsNew(Resource):
-    def get(self):
-        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "whats_new").all()
-        if items:
-            return jsonify([item_serializer(item) for item in items])
-        return jsonify({"message": "No items in What's New section."})
-
-# Register API resources
-api.add_resource(FlashSale, '/api/flashsale', endpoint="flashSale")
-api.add_resource(HotInCategory, '/api/hot_in_category', endpoint="hotInCategory")
-api.add_resource(WhatsNew, '/api/whats_new', endpoint="whatsNew")
-
-# Adding and removing special categories
-@app.route("/api/item/<int:item_id>/add_special_category", methods=["POST"])
-def add_special_category_to_item(item_id):
-    data = request.json
-    special_category_name = data.get("special_category_name")
-    item = Item.query.get(item_id)
-    special_category = SpecialCategory.query.filter_by(name=special_category_name).first()
-
-    if special_category and item:
-        item.special_categories.append(special_category)
-        db.session.commit()
-        return jsonify({"message": f"Special Category {special_category_name} added to item"}), 200
-    return jsonify({"message": "Error: Item or Special Category not found"}), 404
-
-@app.route("/api/item/<int:item_id>/remove_special_category", methods=["POST"])
-def remove_special_category_from_item(item_id):
-    data = request.json
-    special_category_name = data.get("special_category_name")
-    item = Item.query.get(item_id)
-    special_category = SpecialCategory.query.filter_by(name=special_category_name).first()
-
-    if special_category and item:
-        item.special_categories.remove(special_category)
-        db.session.commit()
-        return jsonify({"message": f"Special Category {special_category_name} removed from item"}), 200
-    return jsonify({"message": "Error: Item or Special Category not found"}), 404
-
-# Search items
-@app.route("/api/search_items", methods=["GET"])
-def search_items():
-    search_term = request.args.get('q', '')
-    items = Item.query.filter(Item.item_name.ilike(f'%{search_term}%')).all()
-    if items:
-        return jsonify([item_serializer(item) for item in items]), 200
-    return jsonify({"message": "No search results found."}), 404
-
-# Handle errors
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({"message": "404 - Page Not Found"}), 404
-
-# Sample route for testing
-@app.route('/items', methods=['GET'])
-def get_items():
-    items = Item.query.all()
-    return jsonify([item_serializer(item) for item in items])
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5555)
+if __name__ == '__main__':
+    app.run(port=5555)
