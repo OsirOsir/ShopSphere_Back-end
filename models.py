@@ -1,13 +1,62 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import MetaData
 
-# Defining naming convention for foreign keys
+# Initialize SQLAlchemy and Bcrypt
 metadata = MetaData(naming_convention={
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
 })
-
-# Initialize the SQLAlchemy instance with metadata
 db = SQLAlchemy(metadata=metadata)
+bcrypt = Bcrypt()
+
+# User model
+class User(db.Model):
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False, unique=True)
+    email = db.Column(db.String, unique=True, nullable=False)
+    _password_hash = db.Column(db.String, nullable=False)
+
+    @hybrid_property
+    def password(self):
+        raise AttributeError('Password is not readable!')
+
+    @password.setter
+    def password(self, password):
+        self._password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def authenticate(self, password):
+        return bcrypt.check_password_hash(self._password_hash, password)
+
+# Cart model
+class Cart(db.Model):
+    __tablename__ = 'carts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    items = db.relationship('CartItem', backref='cart', lazy=True)
+    total_price = db.Column(db.Float, nullable=False, default=0.0)
+
+    # Method to update the total price of the cart
+    def update_total(self):
+        self.total_price = sum([item.subtotal for item in self.items])
+
+# CartItem model
+class CartItem(db.Model):
+    __tablename__ = 'cart_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    cart_id = db.Column(db.Integer, db.ForeignKey('carts.id'), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    item = db.relationship('Item')
+
+    # Calculate the subtotal for the cart item
+    @property
+    def subtotal(self):
+        return self.quantity * self.item.price
 
 # Association table for many-to-many relationship between Item and SpecialCategory
 item_special_categories = db.Table(

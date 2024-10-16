@@ -1,9 +1,8 @@
-from flask import Flask, jsonify, request, render_template
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, jsonify, request, render_template, make_response, Blueprint
+from models import db, User, Item, SpecialCategory, Cart, CartItem
 from flask_migrate import Migrate
-from models import db, Item, SpecialCategory  # Import db and models
-from sqlalchemy.exc import IntegrityError
 from flask_restful import Api, Resource
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://groupthree:group3@localhost/shopsphere_db'
@@ -12,6 +11,106 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
+
+# Creates a blueprint for cart routes
+cart_bp = Blueprint('cart', __name__)
+
+@cart_bp.route('/cart/add', methods=['POST'])
+def add_to_cart():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    item_id = data.get('item_id')
+    quantity = data.get('quantity', 1)
+
+    cart = Cart.query.filter_by(user_id=user_id).first()
+    if not cart:
+        cart = Cart(user_id=user_id)
+        db.session.add(cart)
+
+    item = Item.query.get(item_id)
+    if not item:
+        return jsonify({'message': 'Item not found'}), 404
+
+    cart_item = CartItem.query.filter_by(cart_id=cart.id, item_id=item.id).first()
+    if cart_item:
+        cart_item.quantity += quantity
+    else:
+        cart_item = CartItem(cart_id=cart.id, item_id=item.id, quantity=quantity)
+        db.session.add(cart_item)
+
+    cart.update_total()
+    db.session.commit()
+
+    return jsonify({'message': 'Item added to cart'}), 201
+
+@cart_bp.route('/cart/<int:user_id>', methods=['GET'])
+def view_cart(user_id):
+    cart = Cart.query.filter_by(user_id=user_id).first()
+    if not cart or not cart.items:
+        return jsonify({'message': 'Cart is empty'}), 404
+
+    cart_items = [{
+        'item': item.item.item_name,
+        'quantity': item.quantity,
+        'subtotal': item.subtotal
+    } for item in cart.items]
+
+    return jsonify({'items': cart_items, 'total': cart.total_price}), 200
+
+@cart_bp.route('/cart/update', methods=['PUT'])
+def update_cart():
+    data = request.get_json()
+    cart_item = CartItem.query.filter_by(cart_id=data['cart_id'], item_id=data['item_id']).first()
+    if not cart_item:
+        return jsonify({'message': 'Item not found in cart'}), 404
+
+    cart_item.quantity = data['quantity']
+    cart_item.cart.update_total()
+    db.session.commit()
+
+    return jsonify({'message': 'Cart updated'}), 200
+
+@cart_bp.route('/cart/delete', methods=['DELETE'])
+def delete_from_cart():
+    data = request.get_json()
+    cart_item = CartItem.query.filter_by(cart_id=data['cart_id'], item_id=data['item_id']).first()
+    if not cart_item:
+        return jsonify({'message': 'Item not found in cart'}), 404
+
+    db.session.delete(cart_item)
+    cart_item.cart.update_total()
+    db.session.commit()
+
+    return jsonify({'message': 'Item deleted from cart'}), 200
+
+# Register the cart blueprint
+app.register_blueprint(cart_bp)
+
+@app.route('/')
+def index():
+    return "<h1>Welcome to ShopSphere</h1>"
+
+# Users routes
+@app.route('/users', methods=['GET', 'POST'])
+def handle_users():
+    if request.method == 'GET':
+        users = User.query.all()
+        return jsonify([user_serializer(user) for user in users])
+
+    elif request.method == 'POST':
+        data = request.json
+
+        if 'name' not in data or 'email' not in data or 'password' not in data:
+            return jsonify({'error': 'Name, email, and password are required'}), 400
+
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            return jsonify({'error': 'User with this email already exists'}), 400
+
+        new_user = User(name=data['name'], email=data['email'])
+        new_user.password = data['password']
+
+        db.session.add(new_user)
 
 # Serializers
 def item_serializer(item):
@@ -136,30 +235,5 @@ def get_items():
     items = Item.query.all()
     return jsonify([item_serializer(item) for item in items])
 
-# Purchase item route
-@app.route('/items/<int:item_id>/purchase', methods=['POST'])
-def purchase_item(item_id):
-    item = Item.query.get_or_404(item_id)
-    if item.items_available > 0:
-        try:
-            item.items_available -= 1
-            db.session.commit()
-            return jsonify({'message': 'Purchase successful!', 'item': item.item_name}), 200
-        except IntegrityError:
-            db.session.rollback()
-            return jsonify({'message': 'Purchase failed due to an integrity error!'}), 500
-    return jsonify({'message': 'Item is out of stock!'}), 400
-
-# Notify users if out of stock
-@app.route('/items/<int:item_id>/notify', methods=['POST'])
-def notify_users_if_out_of_stock(item_id):
-    item = Item.query.get_or_404(item_id)
-    if item.items_available <= 0:
-        return jsonify({'message': f'Users notified about {item.item_name} being out of stock!'}), 200
-    return jsonify({'message': 'Item is still in stock!'}), 200
-
-# Initialize the database and run the app
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=True, port=5555)

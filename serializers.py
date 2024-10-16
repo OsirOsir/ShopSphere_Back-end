@@ -1,10 +1,11 @@
+# serializers.py
+
 def user_serializer(user):
     return {
         "id": user.id,
         "name": user.name,
         "email": user.email,
-    }
-
+    }  # Closing the dictionary here
 
 def item_serializer(item):
     return {
@@ -13,11 +14,10 @@ def item_serializer(item):
         "description": item.description,
         "price": item.price,
         "category": item.category,
-        "product_quantity": item.product_quantity,  # Field from your 'products' version
+        "items_available": item.items_available,  # Use items_available instead of product_quantity
         "image_url": item.image_url,
         "is_in_stock": item.is_in_stock(),  # Calling the method to check stock
     }
-
 
 def notification_serializer(notification):
     """Serialize a Notification object into a dictionary."""
