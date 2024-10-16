@@ -22,33 +22,60 @@ def index():
 
 @app.route("/api/clothes", methods=["GET"])
 def display_clothes():
-    pass
+    clothes = Item.query.filter(Item.category == "Clothes").all()
+    
+    if not clothes:
+        return jsonify({"message": "No clothes available currently."}), 404
+    
+    return jsonify([item_serializer(clothes_item) for clothes_item in clothes]), 200
 
 
 @app.route("/api/shoes", methods=["GET"])
 def display_shoes():
-    pass
+    shoes = Item.query.filter(Item.category == "Shoes").all()
+    
+    if not shoes:
+        return jsonify({"message": "No shoes available currently."}), 404
+    
+    return jsonify([item_serializer(shoes_item) for shoes_item in shoes]), 200
 
 
 @app.route("/api/artwork", methods=["GET"])
 def display_artwork():
-    pass
+    artworks = Item.query.filter(Item.category == "Artwork").all()
+    
+    if not artworks:
+        return jsonify({"message": "No artworks available currently."}), 404
+
+    return jsonify([item_serializer(artworks_item) for artworks_item in artworks]), 200
 
 
 @app.route("/api/electronics", methods=["GET"])
 def display_electronics():
-    pass
+    electronics = Item.query.filter(Item.category == "Electronics").all()
+    
+    if not electronics:
+        return jsonify({"message": "No electronics available currently."}), 404
+    
+    return jsonify([item_serializer(electronics_item) for electronics_item in electronics]), 200
 
 
 
 @app.route("/api/books", methods=["GET"])
 def display_books():
-    pass
+    books = Item.query.filter(Item.category == "Books").all()
+    
+    if not books:
+        return jsonify({"message": "No books available currently."}), 404
+    
+    return jsonify([item_serializer(books_item) for books_item in books]), 200
 
 
 class FlashSale(Resource):
     def get(self):
-        pass
+        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "flash_sale").all()
+        
+        return jsonify([item_serializer(item) for item in items])
     
     def post(self):
         pass
@@ -61,7 +88,9 @@ api.add_resource(FlashSale, '/api/flashsale', endpoint="flashSale")
 
 class HotInCategory(Resource):
     def get(self):
-        pass
+        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "hot_in_category").all()
+        
+        return jsonify([item_serializer(item) for item in items])
     
     def post(self):
         pass
@@ -74,7 +103,9 @@ api.add_resource(HotInCategory, '/api/hot_in_category', endpoint="hotInCategory"
 
 class WhatsNew(Resource):
     def get(self):
-        pass
+        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "whats_new").all()
+        
+        return jsonify([item_serializer(item) for item in items])
     
     def post(self):
         pass

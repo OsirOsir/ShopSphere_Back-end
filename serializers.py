@@ -3,7 +3,7 @@
 def item_serializer(item):
     return {
         "id": item.id,
-        "name": item.name,
+        "item_name": item.item_name,
         "description": item.description,
         "price": item.price,
         "category": item.category,
