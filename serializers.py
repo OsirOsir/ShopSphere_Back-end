@@ -7,14 +7,14 @@ def user_serializer(user):
         "products": [product_serializer(product) for product in user.products] if user.is_admin() else []  # From 'authentication'
     }
 
-def product_serializer(product):
-    return {
-        "id": product.id,
-        "name": product.name,
-        "description": product.description,
-        "price": product.price,
-        "item_availability": product.item_availability,  # From 'main'
-    }  # Closing the dictionary here
+# def product_serializer(product):
+#     return {
+#         "id": product.id,
+#         "name": product.name,
+#         "description": product.description,
+#         "price": product.price,
+#         "item_availability": product.item_availability,  # From 'main'
+#     }  # Closing the dictionary here
 
 def item_serializer(item):
     return {
@@ -24,9 +24,11 @@ def item_serializer(item):
         "price": item.price,
         "category": item.category,
         "items_available": item.items_available,  # Use items_available instead of product_quantity
+        "offer_price": item.offer_price,
         "image_url": item.image_url,
         "is_in_stock": item.is_in_stock(),  # Calling the method to check stock
     }
+
 
 def notification_serializer(notification):
     """Serialize a Notification object into a dictionary."""
