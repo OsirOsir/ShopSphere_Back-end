@@ -8,6 +8,7 @@ def user_serializer(user):
 def item_serializer(item):
     return {
         "id": item.id,
+        "item_name": item.item_name,
         "item_name": item.item_name,  # Updated to match your models.py
         "description": item.description,
         "price": item.price,

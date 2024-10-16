@@ -1,4 +1,18 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData
+
+metadata = MetaData(naming_convention={
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+})
+
+db = SQLAlchemy(metadata=metadata)
+    
+    
+item_special_categories = db.Table('item_special_categories', 
+                                   db.Column('item_id', db.Integer, db.ForeignKey('items.id'), primary_key=True), 
+                                   db.Column('special_category_id', db.Integer, db.ForeignKey('special_categories.id'), primary_key=True))
+    
+# Item Model
 
 db = SQLAlchemy()
 
@@ -13,6 +27,13 @@ class Item(db.Model):
     category = db.Column(db.String, nullable=False)
     items_available = db.Column(db.Integer, nullable=False)  
     image_url = db.Column(db.Text, nullable=False)
+    
+    special_categories = db.relationship('SpecialCategory', secondary=item_special_categories, backref=db.backref('items', lazy=True))
+
+#Special Category Model
+class SpecialCategory(db.Model):
+    __tablename__ = "special_categories"
+    
 
     # Check if the item is in stock
     def is_in_stock(self):
