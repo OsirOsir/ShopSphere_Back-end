@@ -28,7 +28,7 @@ def item_serializer(item):
         'description': item.description,
         'price': item.price,
         'category': item.category,
-        'product_quantity': item.product_quantity,
+        'items_available': item.items_available,
         'image_url': item.image_url,
         'is_in_stock': item.is_in_stock()  
     }

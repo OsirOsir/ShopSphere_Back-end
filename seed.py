@@ -177,13 +177,12 @@ items = [ Item(item_name= "Casual T-Shirt", description= "A comfortable and casu
 # Seed data into your database
 def seed_items():
     for item in items:
-        # Assuming 'product_quantity' is a field in your database model that maps to 'items_available'
         product = Item(
             item_name=item.item_name,
             description=item.description,
             price=item.price,
             category=item.category,
-            product_quantity=item.items_available,  # Use items_available to seed product_quantity
+            items_available=item.items_available,  # Use items_available to seed product_quantity
             image_url=item.image_url
         )
         
