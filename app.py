@@ -1,25 +1,18 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template, make_response, Blueprint
 from models import db, User, Item, SpecialCategory, Cart, CartItem
-from flask import Flask, jsonify, request, make_response
 from flask_migrate import Migrate
-from serializers import user_serializer
-from flask_bcrypt import Bcrypt  # is used to integrate password hashing and checking in a Flask application, providing a secure way to handle user authentication.
-from sqlalchemy.exc import IntegrityError # conditions are met
-from serializers import item_serializer
-from flask_restful import Resource, Api
+from flask_restful import Api, Resource
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
-
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://groupthree:group3@localhost/shopsphere_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 migrate = Migrate(app, db)
-bcrypt = Bcrypt(app)
-
 api = Api(app)
 
-# Creates a blueprint for cart routes 
+# Creates a blueprint for cart routes
 cart_bp = Blueprint('cart', __name__)
 
 @cart_bp.route('/cart/add', methods=['POST'])
@@ -50,7 +43,6 @@ def add_to_cart():
 
     return jsonify({'message': 'Item added to cart'}), 201
 
-
 @cart_bp.route('/cart/<int:user_id>', methods=['GET'])
 def view_cart(user_id):
     cart = Cart.query.filter_by(user_id=user_id).first()
@@ -58,13 +50,12 @@ def view_cart(user_id):
         return jsonify({'message': 'Cart is empty'}), 404
 
     cart_items = [{
-        'item': item.item.item_name, 
-        'quantity': item.quantity, 
+        'item': item.item.item_name,
+        'quantity': item.quantity,
         'subtotal': item.subtotal
     } for item in cart.items]
 
     return jsonify({'items': cart_items, 'total': cart.total_price}), 200
-
 
 @cart_bp.route('/cart/update', methods=['PUT'])
 def update_cart():
@@ -78,7 +69,6 @@ def update_cart():
     db.session.commit()
 
     return jsonify({'message': 'Cart updated'}), 200
-
 
 @cart_bp.route('/cart/delete', methods=['DELETE'])
 def delete_from_cart():
@@ -96,7 +86,6 @@ def delete_from_cart():
 # Register the cart blueprint
 app.register_blueprint(cart_bp)
 
-
 @app.route('/')
 def index():
     return "<h1>Welcome to ShopSphere</h1>"
@@ -107,204 +96,144 @@ def handle_users():
     if request.method == 'GET':
         users = User.query.all()
         return jsonify([user_serializer(user) for user in users])
-    
+
     elif request.method == 'POST':
         data = request.json
-        
-        # Validate input
+
         if 'name' not in data or 'email' not in data or 'password' not in data:
             return jsonify({'error': 'Name, email, and password are required'}), 400
-        
-        # Check if the user already exists
+
         existing_user = User.query.filter_by(email=data['email']).first()
         if existing_user:
             return jsonify({'error': 'User with this email already exists'}), 400
 
-        # Create a new user and set the password
         new_user = User(name=data['name'], email=data['email'])
-        new_user.password = data['password']  # Use the password setter to hash the password
+        new_user.password = data['password']
 
-        # Add user to the session and commit
         db.session.add(new_user)
 
+# Serializers
+def item_serializer(item):
+    return {
+        "id": item.id,
+        "item_name": item.item_name,
+        "description": item.description,
+        "price": item.price,
+        "category": item.category,
+        "product_quantity": item.product_quantity,
+        "image_url": item.image_url,
+        "is_in_stock": item.is_in_stock(),
+    }
+
+# Routes for categories
 @app.route("/api/clothes", methods=["GET"])
 def display_clothes():
-    pass
-
+    clothes = Item.query.filter(Item.category == "Clothes").all()
+    if not clothes:
+        return jsonify({"message": "No clothes available currently."}), 404
+    return jsonify([item_serializer(clothes_item) for clothes_item in clothes]), 200
 
 @app.route("/api/shoes", methods=["GET"])
 def display_shoes():
-    pass
-
+    shoes = Item.query.filter(Item.category == "Shoes").all()
+    if not shoes:
+        return jsonify({"message": "No shoes available currently."}), 404
+    return jsonify([item_serializer(shoes_item) for shoes_item in shoes]), 200
 
 @app.route("/api/artwork", methods=["GET"])
 def display_artwork():
-    pass
-
+    artworks = Item.query.filter(Item.category == "Artwork").all()
+    if not artworks:
+        return jsonify({"message": "No artworks available currently."}), 404
+    return jsonify([item_serializer(artworks_item) for artworks_item in artworks]), 200
 
 @app.route("/api/electronics", methods=["GET"])
 def display_electronics():
-    pass
-
-
+    electronics = Item.query.filter(Item.category == "Electronics").all()
+    if not electronics:
+        return jsonify({"message": "No electronics available currently."}), 404
+    return jsonify([item_serializer(electronics_item) for electronics_item in electronics]), 200
 
 @app.route("/api/books", methods=["GET"])
 def display_books():
-    pass
+    books = Item.query.filter(Item.category == "Books").all()
+    if not books:
+        return jsonify({"message": "No books available currently."}), 404
+    return jsonify([item_serializer(books_item) for books_item in books]), 200
 
-
+# Special category-related resources
 class FlashSale(Resource):
     def get(self):
-        pass
-    
-    def post(self):
-        pass
-    
-    def delete(self):
-        pass
-    
-api.add_resource(FlashSale, '/api/flashsale', endpoint="flashSale")
-
+        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "flash_sale").all()
+        if items:
+            return jsonify([item_serializer(item) for item in items])
+        return jsonify({"message": "No items in Flash Sale section."})
 
 class HotInCategory(Resource):
     def get(self):
-        pass
-    
-    def post(self):
-        pass
-    
-    def delete(self):
-        pass
-    
-api.add_resource(HotInCategory, '/api/hot_in_category', endpoint="hotInCategory")
-
+        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "hot_in_category").all()
+        if items:
+            return jsonify([item_serializer(item) for item in items])
+        return jsonify({"message": "No items in Hot In Category section."})
 
 class WhatsNew(Resource):
     def get(self):
-        pass
-    
-    def post(self):
-        pass
-    
-    def delete(self):
-        pass
-    
+        items = Item.query.join(Item.special_categories).filter(SpecialCategory.name == "whats_new").all()
+        if items:
+            return jsonify([item_serializer(item) for item in items])
+        return jsonify({"message": "No items in What's New section."})
+
+# Register API resources
+api.add_resource(FlashSale, '/api/flashsale', endpoint="flashSale")
+api.add_resource(HotInCategory, '/api/hot_in_category', endpoint="hotInCategory")
 api.add_resource(WhatsNew, '/api/whats_new', endpoint="whatsNew")
-    
-    
+
+# Adding and removing special categories
 @app.route("/api/item/<int:item_id>/add_special_category", methods=["POST"])
 def add_special_category_to_item(item_id):
     data = request.json
-    special_category_name = data["special_category_name"]
+    special_category_name = data.get("special_category_name")
     item = Item.query.get(item_id)
     special_category = SpecialCategory.query.filter_by(name=special_category_name).first()
 
     if special_category and item:
         item.special_categories.append(special_category)
         db.session.commit()
-
-        return jsonify(user_serializer(new_user)), 201
         return jsonify({"message": f"Special Category {special_category_name} added to item"}), 200
-    
     return jsonify({"message": "Error: Item or Special Category not found"}), 404
 
-# Get user by ID
-@app.route('/users/<int:id>', methods=['GET'])
-def get_user_by_id(id):
-    user = User.query.get(id)
-    if user:
-        return jsonify(user_serializer(user)), 200
-    else:
-        return jsonify({'error': 'User not found'}), 404
-
-# Delete user by ID
-@app.route('/users/<int:id>', methods=['DELETE'])
-def delete_user(id):
-    user = User.query.get(id)
-    if user:
-        db.session.delete(user)
 @app.route("/api/item/<int:item_id>/remove_special_category", methods=["POST"])
 def remove_special_category_from_item(item_id):
     data = request.json
-    special_category_name = data["special_category_name"]
+    special_category_name = data.get("special_category_name")
     item = Item.query.get(item_id)
     special_category = SpecialCategory.query.filter_by(name=special_category_name).first()
 
     if special_category and item:
         item.special_categories.remove(special_category)
         db.session.commit()
-        return jsonify({'message': f'User {id} deleted successfully.'}), 200
-    else:
-        return jsonify({'error': 'User not found'}), 404
         return jsonify({"message": f"Special Category {special_category_name} removed from item"}), 200
-    
     return jsonify({"message": "Error: Item or Special Category not found"}), 404
 
+# Search items
+@app.route("/api/search_items", methods=["GET"])
+def search_items():
+    search_term = request.args.get('q', '')
+    items = Item.query.filter(Item.item_name.ilike(f'%{search_term}%')).all()
+    if items:
+        return jsonify([item_serializer(item) for item in items]), 200
+    return jsonify({"message": "No search results found."}), 404
 
+# Handle errors
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"message": "404 - Page Not Found"}), 404
 
+# Sample route for testing
+@app.route('/items', methods=['GET'])
+def get_items():
+    items = Item.query.all()
+    return jsonify([item_serializer(item) for item in items])
 
-
-
-# # Clothes routes
-# @app.route('/clothes', methods=['GET'])
-# def handle_clothes():
-#     clothes = Clothes.query.all()
-#     return jsonify([clothes_serializer(cloth) for cloth in clothes])
-
-# # Whats New routes
-# @app.route('/whats_new', methods=['GET'])
-# def handle_whats_new():
-#     whats_new_items = WhatsNew.query.all()
-#     return jsonify([whatsnew_serializer(item) for item in whats_new_items])
-
-# # Flash Sale routes
-# @app.route('/flash_sale', methods=['GET'])
-# def handle_flash_sale():
-#     flash_sales = FlashSale.query.all()
-#     return jsonify([flashsale_serializer(sale) for sale in flash_sales])
-
-# # Hot In Category routes
-# @app.route('/hot_in_category', methods=['GET'])
-# def handle_hot_in_category():
-#     hot_items = HotInCategory.query.all()
-#     return jsonify([hotincategory_serializer(item) for item in hot_items])
-
-# # Artwork routes
-# @app.route('/artwork', methods=['GET'])
-# def handle_artwork():
-#     artworks = Artwork.query.all()
-#     return jsonify([artwork_serializer(art) for art in artworks])
-
-# # Shoes routes
-# @app.route('/shoes', methods=['GET'])
-# def handle_shoes():
-#     shoes_list = Shoes.query.all()
-#     return jsonify([shoes_serializer(shoe) for shoe in shoes_list])
-
-# # Electronics routes
-# @app.route('/electronics', methods=['GET'])
-# def handle_electronics():
-#     electronics_list = Electronics.query.all()
-#     return jsonify([electronics_serializer(electronic) for electronic in electronics_list])
-
-# # Books routes
-# @app.route('/books', methods=['GET'])
-# def handle_books():
-#     books = Book.query.all()
-#     return jsonify([book_serializer(book) for book in books])
-
-# # Cart routes
-# @app.route('/cart', methods=['GET'])
-# def handle_cart():
-#     carts = Cart.query.all()
-#     return jsonify([cart_serializer(cart) for cart in carts])
-
-# # Cart Item routes
-# @app.route('/cart_item', methods=['GET'])
-# def handle_cart_items():
-#     cart_items = CartItem.query.all()
-#     return jsonify([cartitem_serializer(item) for item in cart_items])
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True, port=5555)
-

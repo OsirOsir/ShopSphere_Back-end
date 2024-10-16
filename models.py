@@ -17,7 +17,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False, unique=True)
     email = db.Column(db.String, unique=True, nullable=False)
-    _password_hash = db.Column(db.String, nullable=False)  
+    _password_hash = db.Column(db.String, nullable=False)
 
     @hybrid_property
     def password(self):
@@ -33,7 +33,7 @@ class User(db.Model):
 # Cart model
 class Cart(db.Model):
     __tablename__ = 'carts'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     items = db.relationship('CartItem', backref='cart', lazy=True)
@@ -58,7 +58,14 @@ class CartItem(db.Model):
     def subtotal(self):
         return self.quantity * self.item.price
 
-# Item model
+# Association table for many-to-many relationship between Item and SpecialCategory
+item_special_categories = db.Table(
+    'item_special_categories',
+    db.Column('item_id', db.Integer, db.ForeignKey('items.id'), primary_key=True),
+    db.Column('special_category_id', db.Integer, db.ForeignKey('special_categories.id'), primary_key=True)
+)
+
+# Item Model
 class Item(db.Model):
     __tablename__ = 'items'
 
@@ -67,20 +74,39 @@ class Item(db.Model):
     description = db.Column(db.Text)
     price = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String, nullable=False)
-    items_available = db.Column(db.String, nullable=True)
-    offer_price = db.Column(db.Integer)
+    items_available = db.Column(db.Integer, nullable=False)
     image_url = db.Column(db.Text, nullable=False)
 
-    special_categories = db.relationship('SpecialCategory', secondary='item_special_categories', backref=db.backref('items', lazy=True))
+    # Many-to-many relationship with SpecialCategory
+    special_categories = db.relationship(
+        'SpecialCategory',
+        secondary=item_special_categories,
+        backref=db.backref('items', lazy=True)
+    )
 
-# SpecialCategory model
+    # Check if the item is in stock
+    def is_in_stock(self):
+        return self.items_available > 0
+
+# SpecialCategory Model
 class SpecialCategory(db.Model):
     __tablename__ = "special_categories"
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False, unique=True)
 
-# Association table for Item and SpecialCategory
-item_special_categories = db.Table('item_special_categories', 
-                                   db.Column('item_id', db.Integer, db.ForeignKey('items.id'), primary_key=True), 
-                                   db.Column('special_category_id', db.Integer, db.ForeignKey('special_categories.id'), primary_key=True))
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+
+# Notification Model
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.now())
+
+    # Relationship with Item
+    item = db.relationship('Item', backref=db.backref('notifications', lazy=True))
+
+    def __repr__(self):
+        return f'<Notification {self.message}>'
