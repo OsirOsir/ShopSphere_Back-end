@@ -113,6 +113,7 @@ class Item(db.Model):
     price = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String, nullable=False)
     items_available = db.Column(db.Integer, nullable=False)
+    offer_price = db.Column(db.Integer)
     image_url = db.Column(db.Text, nullable=False)
 
     # Many-to-many relationship with SpecialCategory
