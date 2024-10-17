@@ -16,10 +16,10 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(150), unique=True, nullable=False)
     _password_hash = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(50), default='user')
-    is_active = db.Column(db.Boolean, default=True)  
+    is_active = db.Column(db.Boolean, default=True)
 
     # Relationship to the Product model
-    products = db.relationship('Product', backref='owner', lazy=True)
+    products = db.relationship('Product', backref='owner', lazy=True, cascade="all, delete-orphan")
 
     @hybrid_property
     def password(self):
@@ -44,7 +44,7 @@ class User(db.Model, UserMixin):
         return str(self.id)
 
     def __repr__(self):
-        return f'<User(name={self.name}, email={self.email}, role={self.role}, is_active={self.is_active})>'
+        return f'<User(name={self.name}, role={self.role}, is_active={self.is_active})>'
 
 
 # Product model
@@ -62,4 +62,4 @@ class Product(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     def __repr__(self):
-        return f'<Product(name={self.name}, price=${self.price}, item_availability={self.item_availability})>'
+        return f'<Product(name={self.name}, price=${self.price}, availability={self.item_availability})>'

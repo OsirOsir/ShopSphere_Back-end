@@ -16,9 +16,16 @@ def create_users():
         email="user@example.com", 
         role="user"
     )
-    regular_user.password = "userpassword"  
+    regular_user.password = "userpassword" 
 
-    return admin_user, regular_user
+    regular_user1 = User(
+        name="RegularUser1", 
+        email="user1@example.com", 
+        role="user"
+    )
+    regular_user1.password = "userpassword1"  
+
+    return admin_user, regular_user, regular_user1
 
 def create_products(admin_user):
     """Create products associated with the admin user."""
@@ -32,11 +39,12 @@ def create_products(admin_user):
 def seed_data():
     try:
         
-        admin_user, regular_user = create_users()
+        admin_user, regular_user, regular_user1  = create_users()
 
         
         db.session.add(admin_user)
         db.session.add(regular_user)
+        db.session.add(regular_user1)
 
         
         db.session.commit()

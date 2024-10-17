@@ -6,6 +6,7 @@ from flask_bcrypt import Bcrypt
 from sqlalchemy.exc import IntegrityError
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from functools import wraps
+from flask_cors import CORS
 
 app = Flask(__name__)
 
@@ -17,6 +18,7 @@ db.init_app(app)
 migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
+CORS(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -35,7 +37,7 @@ def admin_required(f):
 def index():
     return "<h1>Welcome to ShopSphere</h1>"
 
-@app.route('/users', methods=['GET', 'POST'])
+@app.route('/api/users', methods=['GET', 'POST'])
 def handle_users():
     if request.method == 'GET':
         users = User.query.all()
@@ -74,7 +76,7 @@ def handle_users():
             return jsonify({'error': 'Database integrity error occurred'}), 500
 
 # User login
-@app.route('/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
     user = User.query.filter_by(email=data.get('email')).first()
@@ -85,20 +87,20 @@ def login():
     return jsonify({'error': 'Invalid email or password'}), 401
 
 # User logout
-@app.route('/logout', methods=['POST'])
+@app.route('/api/logout', methods=['POST'])
 @login_required
 def logout():
     logout_user()
     return jsonify({'message': 'Logout successful'}), 200
 
 # User profile
-@app.route('/profile', methods=['GET'])
+@app.route('/api/profile', methods=['GET'])
 @login_required
 def profile():
     return jsonify(user_serializer(current_user)), 200
 
 # Delete account (user self-deletion)
-@app.route('/users/delete', methods=['DELETE'])
+@app.route('/api/users/delete', methods=['DELETE'])
 @login_required
 def delete_account():
     try:
@@ -111,7 +113,7 @@ def delete_account():
         return jsonify({'error': str(e)}), 500
 
 # Admin routes for managing products
-@app.route('/admin/products', methods=['POST'])
+@app.route('/api/admin/products', methods=['POST'])
 @login_required
 @admin_required
 def add_product():
@@ -145,13 +147,13 @@ def add_product():
         return jsonify({'error': str(e)}), 500
 
 # Get all products
-@app.route('/products', methods=['GET'])
+@app.route('/api/products', methods=['GET'])
 def get_products():
     products = Product.query.all()
     return jsonify([product_serializer(product) for product in products]), 200
 
 # Get user by ID
-@app.route('/users/<int:id>', methods=['GET'])
+@app.route('/api/users/<int:id>', methods=['GET'])
 @login_required  # Ensure the user is logged in
 def get_user_by_id(id):
     user = User.query.get(id)
@@ -160,7 +162,7 @@ def get_user_by_id(id):
     return jsonify({'error': 'User not found'}), 404
 
 # Admin delete user
-@app.route('/users/<int:id>', methods=['DELETE'])
+@app.route('/api/users/<int:id>', methods=['DELETE'])
 @login_required
 @admin_required
 def delete_user(id):
