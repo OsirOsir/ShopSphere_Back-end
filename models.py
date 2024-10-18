@@ -3,6 +3,7 @@ from flask_bcrypt import Bcrypt
 from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin
 from sqlalchemy import MetaData
+from datetime import datetime
 
 # Initialize SQLAlchemy and Bcrypt
 metadata = MetaData(naming_convention={
@@ -89,12 +90,23 @@ class CartItem(db.Model):
     cart_id = db.Column(db.Integer, db.ForeignKey('carts.id'), nullable=False)
     item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False, default=1)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'))  # Add this line
     item = db.relationship('Item')
 
-    # Calculate the subtotal for the cart item
     @property
     def subtotal(self):
         return self.quantity * self.item.price
+    
+class Order(db.Model):
+    __tablename__ = 'orders'  
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    total_price = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    cart_items = db.relationship('CartItem', backref='order', lazy=True)
+
+    def __repr__(self):
+        return f'<Order {self.id}>' 
 
 # Association table for many-to-many relationship between Item and SpecialCategory
 item_special_categories = db.Table(
