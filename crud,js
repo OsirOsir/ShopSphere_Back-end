@@ -1,39 +1,168 @@
-import React, { useState } from "react";
-import CreateItemForm from "./components/CreateItemForm";
-import UpdateItemForm from "./components/UpdateItemForm";
-import ItemList from "./components/ItemList";
+// update item
+import React, { useState, useEffect } from 'react';
 
-function App() {
-  const [items, setItems] = useState([]);
+const UpdateItem = ({ itemId, onItemUpdated }) => {
+    const [item, setItem] = useState(null);
 
-  const addItemToList = (newItem) => {
-    setItems([...items, newItem]);
-  };
+    useEffect(() => {
+        const fetchItem = async () => {
+            const response = await fetch(`/items/${itemId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setItem(data);
+            } else {
+                alert('Failed to fetch item.');
+            }
+        };
+        fetchItem();
+    }, [itemId]);
 
-  const updateItemInList = (updatedItem) => {
-    setItems(
-      items.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setItem({ ...item, [name]: value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (Object.values(item).some(value => value.trim() === '')) {
+            alert("All fields are required.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`/items/${itemId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(item),
+            });
+
+            if (response.ok) {
+                const updatedItem = await response.json();
+                onItemUpdated(updatedItem);
+            } else {
+                const error = await response.json();
+                alert(`Error: ${error}`);
+            }
+        } catch (error) {
+            console.error('Error updating item:', error);
+            alert('Failed to update item.');
+        }
+    };
+
+    if (!item) return <div>Loading...</div>;
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <input type="text" name="item_name" value={item.item_name} onChange={handleChange} required />
+            <input type="text" name="description" value={item.description} onChange={handleChange} required />
+            <input type="number" name="price" value={item.price} onChange={handleChange} required />
+            <input type="text" name="category" value={item.category} onChange={handleChange} required />
+            <input type="number" name="items_available" value={item.items_available} onChange={handleChange} required />
+            <input type="text" name="image_url" value={item.image_url} onChange={handleChange} required />
+            <button type="submit">Update Item</button>
+        </form>
     );
-  };
+};
 
-  const deleteItemFromList = (itemId) => {
-    setItems(items.filter((item) => item.id !== itemId));
-  };
+export default UpdateItem;
 
-  return (
-    <div className="App">
-      <h1>Item Management</h1>
+// delete item import React from 'react';
 
-      <CreateItemForm addItemToList={addItemToList} />
-      <UpdateItemForm updateItemInList={updateItemInList} />
+const DeleteItem = ({ itemId, onItemDeleted }) => {
+    const handleDelete = async () => {
+        const confirmDelete = window.confirm("Are you sure you want to delete this item?");
+        if (!confirmDelete) return;
 
-      <ItemList
-        items={items}
-        deleteItemFromList={deleteItemFromList}
-        setItems={setItems}
-      />
-    </div>
-  );
-}
+        try {
+            const response = await fetch(`/items/${itemId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                onItemDeleted(itemId);
+            } else {
+                const error = await response.json();
+                alert(`Error: ${error}`);
+            }
+        } catch (error) {
+            console.error('Error deleting item:', error);
+            alert('Failed to delete item.');
+        }
+    };
+
+    return (
+        <button onClick={handleDelete}>Delete Item</button>
+    );
+};
+
+export default DeleteItem;
+
+// itemlist
+import React, { useEffect, useState } from 'react';
+import CreateItem from './CreateItem';
+import UpdateItem from './UpdateItem';
+import DeleteItem from './DeleteItem';
+
+const ItemList = () => {
+    const [items, setItems] = useState([]);
+    const [editingItemId, setEditingItemId] = useState(null);
+
+    const fetchItems = async () => {
+        const response = await fetch('/items');
+        const data = await response.json();
+        setItems(data);
+    };
+
+    const handleItemCreated = (newItem) => {
+        setItems([...items, newItem]);
+    };
+
+    const handleItemUpdated = (updatedItem) => {
+        setItems(items.map(item => (item.id === updatedItem.id ? updatedItem : item)));
+        setEditingItemId(null);
+    };
+
+    const handleItemDeleted = (itemId) => {
+        setItems(items.filter(item => item.id !== itemId));
+    };
+
+    useEffect(() => {
+        fetchItems();
+    }, []);
+
+    return (
+        <div>
+            <h1>Items</h1>
+            <CreateItem onItemCreated={handleItemCreated} />
+            {items.map(item => (
+                <div key={item.id}>
+                    <h2>{item.item_name}</h2>
+                    <p>{item.description}</p>
+                    <p>Price: ${item.price}</p>
+                    <button onClick={() => setEditingItemId(item.id)}>Edit</button>
+                    <DeleteItem itemId={item.id} onItemDeleted={handleItemDeleted} />
+                </div>
+            ))}
+            {editingItemId && <UpdateItem itemId={editingItemId} onItemUpdated={handleItemUpdated} />}
+        </div>
+    );
+};
+
+export default ItemList;
+
+// app.js
+import React from 'react';
+import ItemList from './ItemList';
+
+const App = () => {
+    return (
+        <div>
+            <h1>Item Management</h1>
+            <ItemList />
+        </div>
+    );
+};
 
 export default App;
