@@ -4,12 +4,12 @@ from flask_migrate import Migrate
 from serializers import user_serializer, product_serializer
 from flask_bcrypt import Bcrypt
 from sqlalchemy.exc import IntegrityError
+from flask_restful import Api
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from functools import wraps
 from flask_cors import CORS
 
 app = Flask(__name__)
-
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://groupthree:group3@localhost/shopsphere_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'supersecretkey'
@@ -18,12 +18,15 @@ db.init_app(app)
 migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
+api = Api(app)
 CORS(app)
 
+# User loader for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Admin check decorator
 def admin_required(f):
     """Decorator to ensure the current user is an admin."""
     @wraps(f)
@@ -37,35 +40,32 @@ def admin_required(f):
 def index():
     return "<h1>Welcome to ShopSphere</h1>"
 
+# Handle users (GET and POST)
 @app.route('/api/users', methods=['GET', 'POST'])
 def handle_users():
     if request.method == 'GET':
         users = User.query.all()
         return jsonify([user_serializer(user) for user in users]), 200
-    
+
     elif request.method == 'POST':
         data = request.json
-
         required_fields = ['name', 'email', 'password']
+
         if not all(field in data for field in required_fields):
             return jsonify({'error': 'Name, email, and password are required'}), 400
-        
-        # Check if the user already exists
+
+        # Check if user already exists
         if User.query.filter_by(email=data['email']).first():
             return jsonify({'error': 'User with this email already exists'}), 400
 
         try:
-            # Set role to 'user' by default, but allow for 'admin' if provided
             role = data.get('role', 'user')
-
-            # Create new user instance
             new_user = User(
-                name=data['name'], 
-                email=data['email'], 
-                role=role  # Assign provided or default role
+                name=data['name'],
+                email=data['email'],
+                role=role
             )
-            new_user.password = data['password']  # Hashing occurs in the User model
-            
+            new_user.password = data['password']  # This will trigger the password hashing setter
             db.session.add(new_user)
             db.session.commit()
 
@@ -81,7 +81,7 @@ def login():
     data = request.json
     user = User.query.filter_by(email=data.get('email')).first()
 
-    if user and user.is_active and user.authenticate(data.get('password')):  
+    if user and user.is_active and user.authenticate(data.get('password')):
         login_user(user)
         return jsonify({'message': 'Login successful', 'user': user_serializer(user)}), 200
     return jsonify({'error': 'Invalid email or password'}), 401
@@ -119,17 +119,14 @@ def delete_account():
 def add_product():
     data = request.json
 
-    # Validate input
     if 'name' not in data or 'price' not in data or 'user_id' not in data:
         return jsonify({'error': 'Name, price, and user_id are required'}), 400
 
     try:
-        # Check if user exists
         user = User.query.get(data['user_id'])
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        # Create a new product
         new_product = Product(
             name=data['name'],
             description=data.get('description', ''),
@@ -154,7 +151,7 @@ def get_products():
 
 # Get user by ID
 @app.route('/api/users/<int:id>', methods=['GET'])
-@login_required  # Ensure the user is logged in
+@login_required
 def get_user_by_id(id):
     user = User.query.get(id)
     if user:
