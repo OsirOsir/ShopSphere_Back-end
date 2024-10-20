@@ -338,4 +338,4 @@ def search_items():
 
 
 if __name__ == '__main__':
-    app.run(port=5555)
+    app.run(port=5555, debug=True)
