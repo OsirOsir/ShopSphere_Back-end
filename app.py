@@ -35,7 +35,7 @@ def admin_required(f):
 # Creates a blueprint for cart routes
 cart_bp = Blueprint('cart', __name__)
 
-@cart_bp.route('/cart/add', methods=['POST'])
+@cart_bp.route('/api/cart/add', methods=['POST'])
 def add_to_cart():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -63,7 +63,7 @@ def add_to_cart():
 
     return jsonify({'message': 'Item added to cart'}), 201
 
-@cart_bp.route('/cart/<int:user_id>', methods=['GET'])
+@cart_bp.route('/api/cart/<int:user_id>', methods=['GET'])
 def view_cart(user_id):
     cart = Cart.query.filter_by(user_id=user_id).first()
     if not cart or not cart.items:
