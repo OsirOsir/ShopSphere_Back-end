@@ -115,6 +115,7 @@ class Item(db.Model):
     items_available = db.Column(db.Integer, nullable=False)
     offer_price = db.Column(db.Integer)
     image_url = db.Column(db.Text, nullable=False)
+    is_flash_sale = db.Column(db.Boolean, default=False)  # Add this line
 
     # Many-to-many relationship with SpecialCategory
     special_categories = db.relationship(
