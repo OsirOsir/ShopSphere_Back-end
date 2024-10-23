@@ -7,6 +7,9 @@ from sqlalchemy.exc import IntegrityError
 from flask_restful import Api, Resource
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from functools import wraps
+from flask_cors import CORS
+
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://groupthree:group3@localhost/shopsphere_db'
@@ -18,6 +21,7 @@ migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 api = Api(app)
+CORS(app, supports_credentials=True)
 
 @login_manager.user_loader
 def load_user(user_id):
