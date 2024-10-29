@@ -228,12 +228,20 @@ def delete_user(id):
     return jsonify({'error': 'User not found'}), 404
 
 # Additional category and item-related routes
-@app.route("/api/clothes", methods=["GET"])
-def display_clothes():
-    clothes = Item.query.filter(Item.category == "Clothes").all()
-    if not clothes:
-        return jsonify({"message": "No clothes available currently."}), 404
-    return jsonify([item_serializer(clothes_item) for clothes_item in clothes]), 200
+# @app.route("/api/clothes", methods=["GET"])
+# def display_clothes():
+#     clothes = Item.query.filter(Item.category == "Clothes").all()
+#     if not clothes:
+#         return jsonify({"message": "No clothes available currently."}), 404
+#     return jsonify([item_serializer(clothes_item) for clothes_item in clothes]), 200
+
+
+class Clothes(Resource):
+    def get(self):
+        clothes = Item.query.filter(Item.category == "Clothes").all()
+        if not clothes:
+            return jsonify({"message": "No clothes available currently."}), 404
+        return jsonify([item_serializer(clothes_item) for clothes_item in clothes]), 200
 
 @app.route("/api/shoes", methods=["GET"])
 def display_shoes():
@@ -293,6 +301,7 @@ class WhatsNew(Resource):
 api.add_resource(FlashSale, '/api/flashsale', endpoint="flashSale")
 api.add_resource(HotInCategory, '/api/hot_in_category', endpoint="hotInCategory")
 api.add_resource(WhatsNew, '/api/whats_new', endpoint="whatsNew")
+api.add_resource(Clothes, '/api/clothes')
     
     
 @app.route("/api/item/<int:item_id>/add_special_category", methods=["POST"])
