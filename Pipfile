@@ -48,6 +48,11 @@ wcwidth = "==0.2.13"
 werkzeug = "==3.0.4"
 zipp = "==3.20.2"
 flask-migrate = "*"
+flask-bcrypt = "*"
+flask-login = "*"
+flask-restful = "*"
+psycopg2-binary = "*"
+python-dotenv = "*"
 
 [dev-packages]
 

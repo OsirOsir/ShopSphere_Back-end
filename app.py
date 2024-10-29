@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, render_template, make_response, Blueprint
-from models import db, User, Item, SpecialCategory, Cart, CartItem, Product
+from models import db, User, Item, SpecialCategory, Cart, CartItem, Product, Order
 from flask_migrate import Migrate
 from serializers import user_serializer, product_serializer, item_serializer
 from flask_bcrypt import Bcrypt
@@ -39,7 +39,7 @@ def admin_required(f):
 # Creates a blueprint for cart routes
 cart_bp = Blueprint('cart', __name__)
 
-@cart_bp.route('/cart/add', methods=['POST'])
+@cart_bp.route('/api/cart/add', methods=['POST'])
 def add_to_cart():
     data = request.get_json()
     user_id = data.get('user_id')
@@ -67,7 +67,7 @@ def add_to_cart():
 
     return jsonify({'message': 'Item added to cart'}), 201
 
-@cart_bp.route('/cart/<int:user_id>', methods=['GET'])
+@cart_bp.route('/api/cart/<int:user_id>', methods=['GET'])
 def view_cart(user_id):
     cart = Cart.query.filter_by(user_id=user_id).first()
     if not cart or not cart.items:
@@ -109,6 +109,35 @@ def delete_from_cart():
 
 # Register the cart blueprint
 app.register_blueprint(cart_bp)
+
+# Checkout route
+@app.route('/checkout', methods=['POST'])
+@login_required
+def checkout():
+    # Get the current user's cart
+    cart = Cart.query.filter_by(user_id=current_user.id).first()
+    if not cart or not cart.items:
+        return jsonify({'message': 'Your cart is empty.'}), 400
+
+    total_price = cart.total_price
+
+    # Create a new order
+    new_order = Order(user_id=current_user.id, total_price=total_price)
+    db.session.add(new_order)
+
+    # Move cart items to the order
+    for item in cart.items:
+        item.order_id = new_order.id  # Associate the cart item with the order
+
+    # Clear the cart
+    db.session.delete(cart)
+    
+    # Commit the changes to the database
+    db.session.commit()
+
+    return jsonify({'message': 'Checkout successful!', 'order_id': new_order.id}), 201
+
+
 
 @app.route('/')
 def index():
